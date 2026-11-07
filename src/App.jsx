@@ -39,6 +39,16 @@ export default function App() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const [projectName, setProjectName] = useState('Untitled project');
+  const [editPrompt, setEditPrompt] = useState('');
+  const [projects, setProjects] = useState([]);
+  const [lastSaved, setLastSaved] = useState('Not saved yet');
+  const html = useMemo(() => generatedSite ? buildWebsiteHtml(generatedSite) : '', [generatedSite]);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('website-genius-projects') || '[]');
+      if (Array.isArray(saved)) setProjects(saved.slice(0, 12));
+    } catch { setProjects([]); }
+  }, []);
 
   const canGenerate = prompt.trim().length > 0;
   const generate = async () => {
