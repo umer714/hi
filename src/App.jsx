@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { buildWebsiteHtml } from './site.js';
 import {
   ArrowUpRight, Sparkles, WandSparkles, LayoutTemplate, FolderOpen, Settings2,
   Plus, ChevronDown, Monitor, Tablet, Smartphone, RefreshCw, Globe2, Code2,
@@ -23,15 +24,7 @@ function makeSite(prompt, selected) {
   return templates.find(t => t.id === chosen) || templates[0];
 }
 
-function PreviewSite({ site, prompt, generatedSite }) {
-  const name = generatedSite?.siteName || (prompt.trim() ? prompt.trim().split(' ').slice(0,2).join(' ') : 'STUDIO');
-  return <div className={`site-preview preview-${site.color}`}>
-    <div className="preview-nav"><div className="preview-brand"><span className="brand-mark-mini">✳</span> {name}<span className="preview-dot">.</span></div><div className="preview-links">{(generatedSite?.navLinks || ['About','Services','Contact']).map((x,i)=><span key={i}>{x}</span>)}</div><button className="preview-cta">{generatedSite?.cta || site.action} <ArrowUpRight size={13}/></button></div>
-    <div className="preview-content"><span className="preview-eyebrow">{generatedSite?.eyebrow || site.type}</span><h1>{generatedSite?.headline || site.title}</h1><p>{generatedSite?.description || site.desc}</p><button className="preview-primary">{generatedSite?.cta || site.action} <ArrowUpRight size={14}/></button>
-      {generatedSite?.sections?.length ? <div className="ai-sections">{generatedSite.sections.slice(0,3).map((section,i)=><article key={i}><span>0{i+1}</span><strong>{section.title}</strong><p>{section.body}</p></article>)}</div> : null}
-      <div className="preview-orbit orbit-one"></div><div className="preview-orbit orbit-two"></div><div className="preview-bottom"><span>01 — 03</span><span>SCROLL TO DISCOVER ↓</span></div></div>
-  </div>;
-}
+function PreviewSite({ site }) { return <div className="site-preview"><iframe title="Generated website preview" sandbox="allow-scripts allow-forms" srcDoc={buildWebsiteHtml(site)} /></div>; }
 
 export default function App() {
   const [prompt, setPrompt] = useState('');
