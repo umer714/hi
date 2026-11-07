@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   const mode = req.body?.mode === 'edit' ? 'edit' : 'generate';
   const existingWebsite = req.body?.existingWebsite;
   if (prompt.length < 8) return res.status(400).json({ error: 'Please enter at least 8 characters.' });
-  if (prompt.length > 1800) return res.status(400).json({ error: 'Please keep your instruction under 1,800 characters.' });
+  if (prompt.length > 50000) return res.status(400).json({ error: 'Please keep your instruction under 50,000 characters.' });
   if (mode === 'edit' && (!existingWebsite || typeof existingWebsite !== 'object')) return res.status(400).json({ error: 'There is no generated website to edit yet.' });
 
   const schema = {
