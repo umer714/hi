@@ -51,33 +51,62 @@ export default function App() {
   }, []);
 
   const canGenerate = prompt.trim().length > 0;
-  const generate = async () => {
-    if (!canGenerate || isGenerating) return;
+  const generate = async (mode = 'generate') => {
+    const instruction = mode === 'edit' ? editPrompt.trim() : prompt.trim();
+    if (!instruction || isGenerating) return;
     setIsGenerating(true);
     setGenerationError('');
-    setGenerated(false);
-    setGeneratedSite(null);
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, template: activeTemplate })
+        body: JSON.stringify({ prompt: instruction, template: activeTemplate, mode, existingWebsite: mode === 'edit' ? generatedSite : undefined })
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Website generation failed. Please try again.');
-      if (!data.website?.headline || !Array.isArray(data.website.sections)) {
-        throw new Error('AI returned an incomplete website. Please try a clearer prompt.');
-      }
+      if (!data.website?.headline || !Array.isArray(data.website.sections)) throw new Error('AI returned an incomplete website. Please try a clearer instruction.');
       setGeneratedSite(data.website);
       setSite(makeSite(prompt, activeTemplate));
-      setProjectName((data.website.siteName || prompt).trim().slice(0, 28));
+      if (mode === 'generate') setProjectName((data.website.siteName || prompt).trim().slice(0, 28));
       setGenerated(true);
       setActiveTab('preview');
+      setLastSaved('Unsaved changes');
+      if (mode === 'edit') setEditPrompt('');
     } catch (error) {
       setGenerationError(error.message || 'Something went wrong. Please try again.');
     } finally {
       setIsGenerating(false);
     }
+  };
+  const downloadHtml = () => {
+    if (!html) return;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = (projectName || 'website').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.html';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+  const saveProject = () => {
+    if (!generatedSite) return;
+    const entry = { id: Date.now(), name: projectName, prompt, template: activeTemplate, site: generatedSite };
+    const next = [entry, ...projects.filter(project => project.name !== projectName)].slice(0, 12);
+    setProjects(next);
+    try { localStorage.setItem('website-genius-projects', JSON.stringify(next)); } catch {}
+    setLastSaved('Saved locally');
+  };
+  const openProject = project => {
+    setGeneratedSite(project.site);
+    setPrompt(project.prompt || '');
+    setActiveTemplate(project.template || 'business');
+    setProjectName(project.name);
+    setGenerated(true);
+    setLastSaved('Loaded from this browser');
+    setActiveTab('preview');
+    setMobileMenu(false);
   };
   const examples = ['A modern architecture studio', 'A landing page for a fitness app', 'A minimal coffee shop website'];
 
@@ -99,7 +128,7 @@ export default function App() {
       <div className="workspace">
         <section className="builder-panel">
           <div className="welcome-block"><div className="eyebrow"><span className="eyebrow-line"></span> YOUR CREATIVE WORKSPACE</div><h1>Your idea.<br/><span>A complete website.</span></h1><p>Describe what you imagine. Watch it take shape. No code, no complicated setup — just your next big idea.</p></div>
-          <div className="prompt-card"><div className="prompt-top"><div className="prompt-label"><WandSparkles size={15}/> WHAT ARE WE CREATING TODAY?</div><span className="prompt-shortcut">AI BUILDER</span></div><textarea value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Describe the website you want to build...&#10;&#10;Example: A premium portfolio website for a photographer with a dark editorial style." rows={4}/><div className="prompt-footer"><span className="prompt-hint"><Sparkles size={13}/> Be as detailed as you like</span><button className="generate-btn" disabled={!canGenerate || isGenerating} onClick={generate}>{isGenerating ? 'Creating your website…' : 'Generate website'} <ArrowUpRight size={16}/></button></div></div>
+          <div className="prompt-card"><div className="prompt-top"><div className="prompt-label"><WandSparkles size={15}/> WHAT ARE WE CREATING TODAY?</div><span className="prompt-shortcut">AI BUILDER</span></div><textarea value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Describe the website you want to build...&#10;&#10;Example: A premium portfolio website for a photographer with a dark editorial style." rows={4}/><div className="prompt-footer"><span className="prompt-hint"><Sparkles size={13}/> Be as detailed as you like</span><button className="generate-btn" disabled={!canGenerate || isGenerating} onClick={() => generate('generate')}>{isGenerating ? 'Creating your website…' : 'Generate website'} <ArrowUpRight size={16}/></button></div></div>
           {generationError && <div className="generation-error" role="alert">{generationError}</div>}
           <div className="examples-row"><span>TRY AN IDEA</span>{examples.map(x => <button key={x} onClick={() => setPrompt(x)}>{x}</button>)}</div>
           <div className="template-heading"><div><span className="section-kicker">A HEAD START</span><h2>Start with a direction</h2></div><button className="view-all">Explore all <ArrowUpRight size={14}/></button></div>
